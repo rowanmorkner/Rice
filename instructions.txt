@@ -1,0 +1,389 @@
+TITLE: Water-Opt MVP – Step-wise Agent Instructions (v1)
+LAST UPDATED: 2025-10-03
+
+1) Project goals (MVP)
+
+Ingest public ag + hydrology data into DuckDB/Parquet locally.
+
+Compute a farm-level profit comparison: grow rice vs. fallow & sell transferable water (based on reduced consumptive use).
+
+Provide simple scenario bands (dry/median/wet hydrology; low/med/high price).
+
+Render an interactive Streamlit app with:
+
+Setup inputs (acres, yield, costs, water price).
+
+Hydrology panel.
+
+Markets panel (price history/bands).
+
+Decision panel (profit cards, break-even water price, sensitivity).
+
+Map panel showing rice polygons and decision color (green=grow, blue=fallow).
+
+Compliance/read-me tab with guardrails text.
+
+Ship runnable code + tests + docs. Desktop-only; no backend.
+
+2) Repo scaffold (create this EXACT structure)
+water-opt/
+  data/
+    raw/
+    stage/
+    mart/
+  etl/
+    __init__.py
+    fetch_all.py
+    fetch_awdb.py
+    fetch_b120.py
+    fetch_ers_rice_outlook.py
+    fetch_nass.py
+    fetch_cimis.py
+    fetch_dwr_cropmap.py
+    fetch_ssebop.py
+    utils_pdf.py
+  models/
+    __init__.py
+    profit.py
+    scenarios.py
+  app/
+    Main.py
+    components/
+      __init__.py
+      charts.py
+      map.py
+  notebooks/
+    backtest_2021.ipynb
+  tests/
+    test_profit.py
+    test_etl_basic.py
+  docs/
+    assumptions.md
+    case_study_template.md
+    data_sources.md
+    README.md
+  .env.example
+  requirements.txt
+  Makefile
+  pyproject.toml
+  .gitignore
+
+3) Dependencies (write to requirements.txt)
+
+Use stable libs only:
+
+duckdb, pandas, pyarrow, requests, tenacity
+
+python-dotenv, pydantic
+
+geopandas, shapely, pyproj
+
+streamlit, plotly
+
+jsonschema
+
+camelot-py, tabula-py (PDF tables)
+
+matplotlib (for tests/plots)
+
+fiona, rtree (for Geo support; if issues, handle gracefully)
+
+Add clear install notes in docs/README.md for macOS/Linux (e.g., brew install openjdk ghostscript for camelot/tabula).
+
+4) Environment variables (.env.example)
+# Required if used
+NASS_API_KEY=YOUR_KEY_HERE
+CIMIS_APP_KEY=YOUR_KEY_HERE
+
+# Optional toggles
+DATA_DIR=./data
+
+
+Code must load via dotenv and fail gracefully if missing (skip those fetchers).
+
+5) Data sources + access method (put human-readable links in docs)
+
+Implement robust fetchers with retries/backoff, timestamped file names in /data/raw/, and normalized tables in /data/stage/ or /data/mart/.
+
+A) Hydrology (implement fully)
+
+NRCS AWDB/SNOTEL (REST JSON):
+
+Docs: https://wcc.sc.egov.usda.gov/awdbRestApi/swagger-ui.html
+
+Example stations list:
+https://wcc.sc.egov.usda.gov/awdbRestApi/services/v3/stations?network=SNTL&state=CA
+
+Example SWE daily:
+.../services/v3/data?stationTriplets=784:CA:SNTL&elements=WTEQ&beginDate=2020-10-01&endDate=2025-09-30
+
+Implement etl/fetch_awdb.py to pull SWE for a small station set in the Sierra and produce:
+
+stage/awdb_swe_daily.parquet (cols: date, station_id, wteq_mm)
+
+mart/hydro_scenarios.parquet (derive dry/median/wet percentiles by month)
+
+DWR Bulletin 120 (PDF auto-download + parse):
+
+Landing: https://cdec.water.ca.gov/reportapp/javareports?name=WSFCast
+
+Individual bulletins follow a consistent pattern (e.g., WSFCastDiscussion.YYYYMMDD.pdf)
+
+Implement etl/fetch_b120.py: discover the latest PDF on page, download to /raw/b120/, parse forecast summary table with camelot or tabula, write:
+
+stage/b120_forecast.parquet (cols: report_date, basin, median, p10, p90)
+
+B) Markets / production
+3) USDA ERS – Rice Outlook (PDF + XLSX; implement fully)
+
+Series page (example): https://www.ers.usda.gov/publications/pub-details?pubid=112593
+
+The latest PDF/XLSX links change; write a small scraper that finds the latest links and downloads to /raw/ers/.
+
+Parse California medium/short-grain price tables into:
+
+stage/ers_prices.parquet (cols: date, price_usd_cwt, series_note)
+
+If table structure varies, handle common variants; document assumptions.
+
+USDA NASS QuickStats (API; stub if no key)
+
+Docs: https://quickstats.nass.usda.gov/api
+
+Build function to pull CA/county rice yields (commodity_desc=RICE) →
+stage/nass_rice.parquet (year, county, yield_cwt_acre)
+
+USDA AMS – MyMarketNews (API; optional)
+
+Base: https://mymarketnews.ams.usda.gov/mymarketnews-api
+
+Create a minimal fetch that pulls weekly context if an endpoint is available, else skip cleanly.
+
+C) Land/crops
+6) CA DWR Statewide Crop Mapping (ArcGIS REST)
+
+Dataset hub: https://data.ca.gov/dataset/statewide-crop-mapping
+
+Example service (update to latest available):
+https://gis.water.ca.gov/arcgis/rest/services/Planning/i15_Crop_Mapping_2022_Provisional/MapServer/0
+
+Query subset (counties in Sacramento Valley; class == rice) → save:
+
+stage/dwr_rice_2022.geojson
+
+mart/rice_polygons_2022.parquet (centroid_x, centroid_y, acres, county, maybe district if attribute present)
+
+D) ET for consumptive use (Phase 2; stub)
+7) USGS SSEBop ET (monthly/seasonal rasters)
+
+Discovery: https://www.usgs.gov
+ (search “SSEBop evapotranspiration CONUS”)
+
+Stub fetch_ssebop.py with TODOs and a function signature that later performs zonal stats over rice polygons.
+
+E) Weather/Reference ET (Optional at MVP; stub)
+8) CIMIS ETo API (requires key)
+
+Docs: http://et.water.ca.gov/Rest/Index
+
+Prepare fetch_cimis.py with a function that, if a key exists, pulls daily ETo for 3–5 stations nearest to Gridley/Richvale/Sutter and writes:
+
+stage/cimis_daily.parquet (date, station, eto_in)
+
+6) ETL orchestrator
+
+Implement etl/fetch_all.py with CLI:
+
+--awdb, --b120, --ers, --nass, --cimis, --dwr, --ssebop, --all
+
+Each subfetcher returns a dict with rows_written, targets (file paths), and log messages.
+
+Maintain data/manifest.csv (append mode) with: timestamp, source, artifact_path, n_rows, sha256.
+
+7) Data modeling
+
+Implement these two modules:
+
+models/scenarios.py
+
+build_hydro_scenarios(awdb_df, b120_df) -> DataFrame
+Produces monthly dry/median/wet multipliers (0–1) and a simple “allocation index” we can display.
+
+build_price_bands(ers_prices_df) -> DataFrame
+Rolling p10/median/p90 of CA medium/short-grain prices.
+
+models/profit.py
+
+Inputs: acres, expected_yield_cwt_ac, price_usd_cwt (from ERS bands), var_cost_usd_ac, fixed_cost_usd, cu_af_per_ac (consumptive use), water_price_usd_af, conveyance_loss_frac, transaction_cost_usd.
+
+Outputs dict:
+
+profit_grow, profit_fallow, delta, breakeven_water_price_usd_af
+(breakeven where profit_grow == profit_fallow)
+
+Implement with clear units. Default cu_af_per_ac as a parameter; leave a TODO to replace with SSEBop later.
+
+Add unit tests in tests/test_profit.py covering:
+
+Positive delta for reasonable water price and CU.
+
+Breakeven math correctness.
+
+8) Streamlit app (app/Main.py)
+
+Tabs:
+
+Setup
+
+Inputs: acres, expected yield, var cost, fixed cost, water price, conveyance loss %, transaction cost. Sliders + numeric inputs with sensible defaults.
+
+Hydrology
+
+Plot SWE history for 2–3 stations and banded hydro scenario table.
+
+Markets
+
+Plot ERS price history with p10/median/p90 band.
+
+Decision
+
+Show profit_grow vs profit_fallow cards, delta, and breakeven water price.
+
+Add a basic tornado chart for sensitivity (vary price, yield, CU, water price).
+
+Map
+
+Load mart/rice_polygons_2022.parquet (centroids or light polygons).
+
+Color by decision (based on current inputs applied uniformly): green if grow > fallow, blue otherwise.
+
+Compliance
+
+Static markdown summarizing guardrails (cropland idling → reduced consumptive use; possible hearing thresholds; conveyance losses; “new water” requirement). Add a disclaimer to consult District/SWRCB.
+
+Export:
+
+Button to export a CSV summary of inputs/outputs and a PNG of decision chart into /data/mart/exports/.
+
+9) Makefile + simple commands
+
+Create a Makefile with:
+
+.PHONY: setup etl app test clean
+
+setup:
+\tpython -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+
+etl:
+\tpython etl/fetch_all.py --ers --awdb --b120 --dwr
+
+app:
+\tstreamlit run app/Main.py
+
+test:
+\tpytest -q
+
+clean:
+\trm -rf data/stage/* data/mart/* data/manifest.csv
+
+
+(Also add a minimal pyproject.toml so pytest just works; if you don’t add pytest, write a tiny runner in tests/.)
+
+10) Documentation
+
+docs/README.md: setup, .env, how to run ETL/app/tests, data refresh notes.
+
+docs/assumptions.md: default CU (cu_af_per_ac), cost defaults, conveyance loss default, transaction cost default, price band logic.
+
+docs/data_sources.md: human-readable links + notes for each source above, including:
+
+NRCS AWDB Swagger (REST JSON)
+
+CDEC/Bulletin 120 (PDF download)
+
+ERS Rice Outlook (PDF/XLSX)
+
+NASS QuickStats (API + key)
+
+AMS MyMarketNews (API)
+
+DWR Crop Map ArcGIS REST
+
+CIMIS ETo (API + key)
+
+USGS SSEBop (ET rasters)
+
+docs/case_study_template.md: backtest narrative template (year, district, assumptions, results, caveats).
+
+11) Quality bar / acceptance criteria
+
+make etl runs without exceptions for AWDB, B120, ERS, DWR and produces non-empty parquet/geojson files in data/stage/ and data/mart/.
+
+make app launches Streamlit and renders all six tabs; no hard crashes if optional datasets/keys are missing (show “data unavailable” notes).
+
+tests/test_profit.py passes; breakeven math verified.
+
+All fetchers log to data/manifest.csv with timestamp, source, artifact path, row count.
+
+No secrets in code or repo; .env.example present; code reads env vars.
+
+Code is formatted and commented; functions have docstrings.
+
+12) Implementation details (what to fully implement vs. stub)
+
+Fully implement now:
+
+etl/fetch_awdb.py: station list (2–4 Sierra stations), SWE daily since 2015, simple monthly percentiles. Clean, typed, retried, with schema validation.
+
+etl/fetch_ers_rice_outlook.py: scrape latest PDF/XLSX from the series page, parse a CA medium/short-grain price table to a tidy parquet; handle common table shape variants.
+
+etl/fetch_b120.py: discover latest PDF from CDEC page, download, parse one summary table (basin forecast med/p10/p90) to tidy parquet.
+
+etl/fetch_dwr_cropmap.py: query ArcGIS REST for 2022 rice polygons in Sacramento Valley counties (Butte, Glenn, Colusa, Sutter, Yuba) into GeoJSON + light parquet with centroid + acres.
+
+Stub with TODOs (graceful no-op if missing keys/data):
+
+etl/fetch_nass.py (API key)
+
+etl/fetch_cimis.py (API key)
+
+etl/fetch_ssebop.py (raster workflows)
+
+13) After build, run these commands for me
+
+make setup
+
+make etl
+
+make app
+
+Show me a screenshot (or console output) verifying files created:
+
+data/stage/awdb_swe_daily.parquet
+
+data/stage/b120_forecast.parquet
+
+data/stage/ers_prices.parquet
+
+data/stage/dwr_rice_2022.geojson
+
+data/mart/rice_polygons_2022.parquet
+
+data/manifest.csv
+
+Run pytest -q and report results.
+
+WORKFLOW (step-wise REPL)
+1) Read this file and CHECKLIST.md.
+2) Execute the next unchecked task only.
+3) Run that task's acceptance checks.
+4) Append a concise block to progress.log (timestamp, task ID, files changed, outputs, deviations).
+5) Ask for approval to continue.
+
+STOP & ASK FIRST IF:
+- You need to change libraries or versions beyond `requirements.txt`.
+- You need to alter repo structure or acceptance criteria.
+- A site blocks scraping or changes layout materially.
+
+DEVIATIONS
+- If you must deviate, document in progress.log under that task and request approval.
