@@ -10,6 +10,9 @@ Desktop-first "Grow vs. Fallow & Sell Water" decision tool for Central Californi
 ```bash
 # For camelot-py (PDF table extraction)
 brew install ghostscript tcl-tk
+
+# For raster processing (Phase 2: SSEBop ET)
+brew install gdal
 ```
 
 **Linux (Debian/Ubuntu):**
@@ -19,6 +22,16 @@ sudo apt-get install ghostscript python3-tk
 
 # For tabula-py
 sudo apt-get install default-jre
+
+# For raster processing (Phase 2: SSEBop ET)
+sudo apt-get install gdal-bin libgdal-dev python3-gdal
+```
+
+**Windows:**
+```powershell
+# For raster processing (Phase 2: SSEBop ET)
+# Install OSGeo4W from https://trac.osgeo.org/osgeo4w/
+# Or use conda: conda install -c conda-forge gdal
 ```
 
 ### Python Environment

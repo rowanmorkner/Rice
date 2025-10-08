@@ -1,0 +1,700 @@
+# Water-Opt Phase 2 - Enhancement Instructions
+
+**Version**: 2.0
+**Last Updated**: 2025-10-04
+**Status**: Phase 1 Complete (MVP operational)
+
+---
+
+## Overview
+
+Phase 2 builds on the complete MVP by adding:
+1. **Field-specific ET data** (SSEBop integration)
+2. **Historical price data** (NASS QuickStats when API recovers)
+3. **Partial fallowing optimization** (linear programming)
+4. **Risk analysis** (Monte Carlo simulation)
+5. **Enhanced user experience** (field-level interaction)
+
+---
+
+## Phase 1 Completion Status
+
+✅ **All MVP features delivered and operational**
+- 8 data sources integrated (6 full, 1 blocked by API, 1 stub)
+- Simple cost-benefit profit model with breakeven analysis
+- Interactive Streamlit dashboard (6 tabs)
+- 30/30 unit tests passing (100%)
+- Comprehensive documentation
+- Production-ready code
+
+📋 **See PROJECT_STATUS_REPORT.md for complete analysis**
+
+---
+
+## Phase 2 Priorities
+
+### Priority 1: Data Quality Improvements
+
+#### 1.1 SSEBop Actual ET Integration ⭐ **HIGHEST PRIORITY**
+
+**Goal**: Replace default 4.0 af/ac consumptive use with field-specific ET data
+
+**Implementation** (`etl/fetch_ssebop.py`):
+```python
+def fetch_ssebop_et_for_rice(
+    year: int,
+    rice_polygons_path: Path,
+    output_path: Path
+) -> pd.DataFrame:
+    """
+    Fetch SSEBop ET rasters and compute seasonal ET for rice fields.
+
+    Workflow:
+    1. Download monthly SSEBop ET rasters (May-September)
+    2. Perform zonal statistics over rice polygons
+    3. Sum to seasonal ET totals
+    4. Convert mm to acre-feet per acre
+
+    Returns:
+        DataFrame with columns:
+        - polygon_id, county, acres
+        - seasonal_et_mm, seasonal_et_inches, seasonal_et_af_per_ac
+    """
+```
+
+**Data Sources**:
+- Primary: USGS SSEBop CONUS monthly ET
+  - URL: https://earlywarning.usgs.gov/ssebop
+  - Format: GeoTIFF rasters
+  - Resolution: 1km
+  - Frequency: Monthly
+
+- Alternative: OpenET API
+  - URL: https://openetdata.org/
+  - Advantages: Pre-processed, field-ready
+  - Considerations: May require subscription
+
+**Required Packages** (add to requirements.txt):
+```
+rasterstats>=0.19.0
+rasterio>=1.3.0
+xarray>=2023.0.0
+```
+
+**Output Schema**:
+```
+mart/rice_et_seasonal_{year}.parquet
+Columns:
+- polygon_id (int): Unique field identifier
+- county (str): County name
+- acres (float): Field size
+- seasonal_et_mm (float): Total ET May-Sep in millimeters
+- seasonal_et_inches (float): Total ET in inches
+- seasonal_et_af_per_ac (float): Consumptive use in acre-feet per acre
+- data_quality (str): 'complete', 'partial', 'interpolated'
+```
+
+**Impact**:
+- Improves CU accuracy by 10-15%
+- Enables field-specific decisions
+- Validates 4.0 af/ac default assumption
+
+**Acceptance Criteria**:
+- Downloads 5 months of rasters (May-Sep) for target year
+- Performs zonal statistics over 4,612 rice polygons
+- Produces parquet with ET values for >90% of fields
+- Mean ET in reasonable range (3.5-4.5 af/ac)
+- Manifest updated with data provenance
+
+---
+
+#### 1.2 NASS QuickStats Price/Yield Integration
+
+**Status**: Code complete, waiting for API recovery
+
+**Goal**: Replace ERS stub data with historical time series
+
+**Implementation** (`etl/fetch_nass.py`):
+- ✅ Already implemented (470 lines)
+- ✅ API key configured
+- ⚠️ Blocked by NASS API timeouts (external issue)
+
+**Actions**:
+1. Monitor NASS API status: https://quickstats.nass.usda.gov/api
+2. Test with: `python -m etl.fetch_nass` when API recovers
+3. Verify output: `data/stage/nass_rice.parquet`
+4. Update price bands in models/scenarios.py
+
+**Expected Output**:
+```
+stage/nass_rice_prices.parquet (2000-2024)
+- year, state, county, price_usd_cwt, yield_cwt_ac
+
+stage/nass_rice_yields.parquet
+- year, county, yield_cwt_ac, acres_planted, acres_harvested
+```
+
+**Impact**:
+- 20+ years of historical price data
+- Robust price percentile bands
+- County-specific yield trends
+
+---
+
+#### 1.3 DWR Crop Map Updates
+
+**Goal**: Integrate 2023/2024 crop maps when released
+
+**Monitoring**:
+- Check quarterly: https://data.ca.gov/dataset/statewide-crop-mapping
+- Typical release: Fall (for previous year's data)
+
+**Implementation**:
+- Use existing `etl/fetch_dwr_cropmap.py`
+- Update `SHAPEFILE_URL` variable
+- Run: `python -m etl.fetch_dwr_cropmap --year 2023`
+
+**Impact**: Current acreage data for decision support
+
+---
+
+### Priority 2: Model Enhancements
+
+#### 2.1 Partial Fallowing Optimization
+
+**Goal**: Optimize field-by-field decisions instead of all-or-nothing
+
+**New Model** (`models/optimize.py`):
+```python
+def optimize_partial_fallow(
+    fields_df: pd.DataFrame,
+    constraints: dict
+) -> pd.DataFrame:
+    """
+    Linear programming to maximize profit across all fields.
+
+    Decision variable: x_i ∈ {0, 1} for each field i
+    x_i = 1: grow rice
+    x_i = 0: fallow and sell water
+
+    Objective:
+    Maximize Σ [x_i * profit_grow_i + (1 - x_i) * profit_fallow_i]
+
+    Constraints:
+    - Spatial: Adjacent fields should have same decision (optional)
+    - Water: Total water transferred ≤ district limits
+    - Economic: Transaction costs with economies of scale
+
+    Args:
+        fields_df: DataFrame with per-field parameters
+        constraints: Dict with spatial/district rules
+
+    Returns:
+        DataFrame with optimal decision per field
+    """
+```
+
+**Required Packages**:
+```
+pulp>=2.7.0  # Linear programming
+# OR
+scipy>=1.11.0  # Alternative solver
+```
+
+**Features**:
+- Field-level profit calculation
+- Spatial constraints (adjacency, blocks)
+- District-level water transfer limits
+- Transaction cost economies of scale
+
+**Acceptance Criteria**:
+- Solves for 4,612 fields in <10 seconds
+- Respects all constraints
+- Profit improvement vs binary decision documented
+- Unit tests for solver correctness
+
+---
+
+#### 2.2 Multi-Year Planning with Water Banking
+
+**Goal**: Optimize decisions across multiple years with carryover storage
+
+**New Model** (`models/multiyear.py`):
+```python
+def optimize_multiyear(
+    years: int,
+    hydro_scenarios: pd.DataFrame,
+    storage_capacity_af: float,
+    discount_rate: float = 0.05
+) -> pd.DataFrame:
+    """
+    Dynamic programming for multi-year water banking decisions.
+
+    States: (year, stored_water, allocation)
+    Actions: grow, fallow_and_store, fallow_and_sell
+
+    Objective: Maximize NPV of profits over planning horizon
+
+    Returns:
+        Optimal policy table
+    """
+```
+
+**Features**:
+- Carryover storage modeling
+- Future allocation uncertainty
+- Net present value calculation
+- Scenario tree exploration
+
+**Complexity**: High - Phase 3 candidate
+
+---
+
+#### 2.3 Risk Analysis and Uncertainty
+
+**Goal**: Quantify decision confidence with Monte Carlo simulation
+
+**New Model** (`models/risk.py`):
+```python
+def monte_carlo_analysis(
+    base_params: dict,
+    uncertainty_ranges: dict,
+    n_simulations: int = 10000
+) -> dict:
+    """
+    Monte Carlo simulation for profit uncertainty.
+
+    Uncertain parameters:
+    - Rice yield (normal distribution from historical data)
+    - Rice price (normal distribution from price bands)
+    - Water price (uniform distribution from range)
+    - Consumptive use (normal distribution from ET data)
+
+    Returns:
+        {
+            'profit_grow': {mean, std, p10, p50, p90},
+            'profit_fallow': {mean, std, p10, p50, p90},
+            'prob_grow_better': float,
+            'value_at_risk_5pct': float
+        }
+    """
+```
+
+**Features**:
+- Probability distributions for uncertain inputs
+- Expected value calculations
+- Value-at-Risk (VaR) metrics
+- Confidence intervals for recommendations
+
+**Visualization** (add to Decision tab):
+- Profit distribution histograms
+- Probability of success chart
+- Risk vs return scatter plot
+
+**Acceptance Criteria**:
+- 10,000 simulations in <5 seconds
+- Reasonable distributions (no negative yields/prices)
+- Clear interpretation guidance
+
+---
+
+### Priority 3: User Experience Enhancements
+
+#### 3.1 Field-Level Map Interaction
+
+**Goal**: Click individual fields to see field-specific analysis
+
+**Enhancement** (`app/components/map.py`):
+```python
+def plot_interactive_rice_map(
+    polygons_df: pd.DataFrame,
+    decisions_df: pd.DataFrame
+) -> None:
+    """
+    Interactive map with click handlers.
+
+    Features:
+    - Click polygon → sidebar with field details
+    - Custom parameters per field
+    - Field-level profit comparison
+    - Export field-level CSV
+    """
+```
+
+**UI Changes**:
+- Sidebar appears on field click
+- Show field-specific:
+  - Acres, county, ET (if available)
+  - Profit (grow vs fallow)
+  - Sensitivity to parameters
+  - Historical decisions (if data available)
+- Allow parameter overrides per field
+- Batch edit for multiple selected fields
+
+**Technical Notes**:
+- Use Plotly click events
+- Store field selections in session state
+- Consider performance (sample large maps)
+
+---
+
+#### 3.2 Historical Backtest Tool
+
+**Goal**: Automated validation against actual historical outcomes
+
+**New Module** (`app/backtest.py` or new tab):
+```python
+def run_backtest(
+    year: int,
+    district: str,
+    actual_outcomes: dict
+) -> dict:
+    """
+    Compare model predictions to actual decisions and outcomes.
+
+    Inputs:
+    - Historical parameters (year, district)
+    - Actual allocation, prices, yields
+    - Actual decisions made by growers
+
+    Outputs:
+    - Model recommendation vs actual decision
+    - Model profit prediction vs actual profit
+    - Calibration metrics (RMSE, MAE)
+    - Suggested parameter adjustments
+    """
+```
+
+**Features**:
+- Pre-populated historical scenarios (2021 drought, etc.)
+- Side-by-side comparison tables
+- Calibration adjustment suggestions
+- Exportable case study reports
+
+**Data Requirements**:
+- Historical allocation data (districts, years)
+- Historical prices and yields (NASS)
+- Survey of actual grower decisions (may be limited)
+
+---
+
+#### 3.3 Mobile-Responsive Layout
+
+**Goal**: Usable on tablets for field access
+
+**Changes**:
+- Streamlit layout optimizations
+- Responsive chart sizing
+- Touch-friendly controls
+- Simplified mobile dashboard view
+
+**Implementation**:
+- Test on iPad/tablet (1024x768)
+- Adjust column layouts with `st.columns()`
+- Hide complex visualizations on mobile
+- Mobile-specific navigation
+
+---
+
+### Priority 4: Data Integrations
+
+#### 4.1 Real-Time Water Market Data
+
+**Goal**: Integrate live water prices (if available)
+
+**Challenge**: No public real-time water market API exists
+
+**Options**:
+1. **Web scraping**: Water trading bulletin boards
+   - CA Water Exchange (if accessible)
+   - Local district postings
+2. **Manual input**: Admin interface to update prices
+3. **Survey/crowdsourcing**: Aggregated transaction data
+
+**Implementation** (if feasible):
+```python
+# etl/fetch_water_prices.py
+def fetch_water_market_prices(
+    region: str,
+    date_range: tuple
+) -> pd.DataFrame:
+    """
+    Fetch recent water transfer prices.
+
+    Returns:
+        DataFrame: date, buyer, seller, price_usd_af, volume_af
+    """
+```
+
+**Impact**: Market-driven decision support vs fixed assumptions
+
+---
+
+#### 4.2 District-Specific Rules Database
+
+**Goal**: Automate compliance checks per irrigation district
+
+**Data Structure** (`data/districts_rules.json`):
+```json
+{
+  "Glenn-Colusa Irrigation District": {
+    "allows_transfers": true,
+    "hearing_threshold_af": 5000,
+    "conveyance_loss_pct": 8.0,
+    "transaction_fee_usd": 500,
+    "contact": "gcid@gcid.net",
+    "water_code_section": "§1725"
+  },
+  ...
+}
+```
+
+**Implementation**:
+- JSON database of district rules
+- User selects district in Setup tab
+- Auto-populate conveyance loss, fees, thresholds
+- Warning messages if transfer exceeds hearing threshold
+
+**Data Collection**:
+- Manual compilation from district websites
+- Survey of district managers
+- Legal review recommended
+
+---
+
+#### 4.3 Export and Integration Features
+
+**Goal**: Seamless integration with farm management systems
+
+**Features**:
+1. **PDF Report Generation**:
+   - `reportlab` or `weasyprint`
+   - Professional layout with charts
+   - Shareable with advisors/lenders
+
+2. **Email Alerts**:
+   - Configurable thresholds (e.g., breakeven water price changes)
+   - Weekly scenario updates
+   - Requires SMTP configuration
+
+3. **API Export** (future):
+   - REST API for farm management software integration
+   - Requires backend deployment
+
+**Implementation** (PDF export):
+```python
+# app/components/export.py
+def generate_pdf_report(
+    parameters: dict,
+    results: dict,
+    output_path: Path
+) -> None:
+    """
+    Generate professional PDF report.
+
+    Sections:
+    - Executive summary
+    - Parameter assumptions
+    - Profit comparison
+    - Sensitivity analysis
+    - Compliance notes
+    - Data sources
+    """
+```
+
+---
+
+## Phase 2 Development Workflow
+
+### Step 1: Priority Selection
+1. Review priorities with stakeholders
+2. Select highest-value, lowest-risk items first
+3. Document chosen enhancements in Phase 2 backlog
+
+### Step 2: Implementation Cycle
+For each enhancement:
+1. Update `CHECKLIST_PHASE2.md` with tasks
+2. Create feature branch: `git checkout -b feature/ssebop-et`
+3. Implement with TDD (write tests first)
+4. Update documentation
+5. Run full test suite: `make test`
+6. Create pull request with detailed description
+7. Update `progress.log` with completion notes
+
+### Step 3: Integration Testing
+- Test new features with existing MVP
+- Verify no regressions (all 30 original tests still pass)
+- Performance benchmarks (dashboard load time <3s)
+- User acceptance testing with sample growers
+
+### Step 4: Deployment
+- Update version in `pyproject.toml`
+- Create release notes
+- Tag release: `git tag -a v2.0 -m "Phase 2 release"`
+- Push to GitHub: `git push origin main --tags`
+
+---
+
+## Phase 2 Acceptance Criteria
+
+### Data Quality
+- [ ] SSEBop ET integrated for >90% of fields
+- [ ] NASS historical prices (20+ years) loaded
+- [ ] Mean field-level ET within 3.5-4.5 af/ac range
+- [ ] Data quality flags documented
+
+### Model Enhancements
+- [ ] Partial fallowing optimizer runs in <10 seconds
+- [ ] Multi-year planner (if implemented) converges
+- [ ] Risk analysis produces reasonable distributions
+- [ ] All new models have unit tests (coverage >80%)
+
+### User Experience
+- [ ] Field-level map interaction functional
+- [ ] Click field → see field-specific profit
+- [ ] Backtest tool with ≥2 historical scenarios
+- [ ] Mobile-responsive on 1024x768 screen
+
+### Documentation
+- [ ] Each enhancement documented in `docs/`
+- [ ] Updated assumptions.md with new parameters
+- [ ] Updated README.md with new features
+- [ ] Phase 2 progress logged
+
+### Quality Assurance
+- [ ] All Phase 1 tests still passing (30/30)
+- [ ] New tests for Phase 2 features (target: 20+)
+- [ ] No performance regressions
+- [ ] Code review completed
+
+---
+
+## Known Constraints
+
+### Technical Limitations
+- **SSEBop Rasters**: Large file downloads (5GB+ for full year)
+  - Mitigation: Cache processed results, only download needed months
+- **Optimization Solver**: May struggle with >10,000 fields
+  - Mitigation: Use hierarchical clustering, solve by region
+- **Streamlit Performance**: Dashboard may slow with complex maps
+  - Mitigation: Sample fields for display, compute full in background
+
+### Data Availability
+- **NASS API**: Still experiencing timeouts (external dependency)
+  - Mitigation: Continue using ERS stub until recovery
+- **Water Market Prices**: No public API exists
+  - Mitigation: Manual input or fixed assumptions
+- **District Rules**: Require manual compilation
+  - Mitigation: Start with major districts, expand gradually
+
+### Regulatory Considerations
+- **Model Complexity**: More complex models may be harder to explain
+  - Mitigation: Keep simple model as default, advanced as opt-in
+- **Optimization Liability**: Automated decisions may carry legal risk
+  - Mitigation: Clear disclaimers, advisory-only recommendations
+- **Data Privacy**: Field-level data may be sensitive
+  - Mitigation: Local-only processing, no cloud storage
+
+---
+
+## Success Metrics
+
+### Quantitative
+- SSEBop ET accuracy: ±10% of UC Davis averages
+- Optimization profit improvement: ≥5% vs binary decision
+- Dashboard load time: <3 seconds
+- Test coverage: ≥80%
+- User adoption: 10+ active users within 3 months
+
+### Qualitative
+- User feedback: "useful for decision-making"
+- Advisor endorsement: 2+ ag consultants recommend
+- Regulatory clarity: No compliance violations reported
+- Code quality: Passes linting, no security issues
+
+---
+
+## Timeline Estimate
+
+**Aggressive (3 months)**:
+- Month 1: SSEBop ET + NASS integration
+- Month 2: Partial fallowing optimization + risk analysis
+- Month 3: UX enhancements + testing
+
+**Realistic (6 months)**:
+- Months 1-2: Data quality (SSEBop, NASS, DWR updates)
+- Months 3-4: Model enhancements (optimization, multi-year, risk)
+- Months 5-6: UX improvements + integration testing + documentation
+
+**Depends on**:
+- NASS API recovery timeline (external)
+- SSEBop data access logistics
+- Stakeholder feedback and priorities
+
+---
+
+## Resources Required
+
+### Technical
+- Python development environment (existing)
+- Raster processing tools (GDAL, rasterio)
+- Optimization solver (PuLP or scipy)
+- Testing infrastructure (pytest, existing)
+
+### Data
+- SSEBop rasters (~5GB/year)
+- NASS API access (when available)
+- District rules database (manual compilation)
+
+### Expertise
+- Geospatial analysis (raster processing)
+- Optimization modeling (linear programming)
+- Agricultural economics (model validation)
+- UX design (dashboard improvements)
+
+---
+
+## Getting Started with Phase 2
+
+### Immediate Next Steps
+1. **Prioritize**: Review this document with stakeholders, select top 3 priorities
+2. **SSEBop Spike**: 1-week technical spike to test SSEBop data access
+3. **NASS Monitor**: Set up automated check for API recovery
+4. **Create Backlog**: Copy selected items to CHECKLIST_PHASE2.md
+
+### Questions to Answer
+- Which enhancements provide most value?
+- What is acceptable timeline?
+- Are there budget constraints?
+- Who will be primary users?
+- What is success criteria?
+
+### Code Start
+```bash
+# Create Phase 2 branch
+git checkout -b phase2-development
+
+# Start with highest priority (SSEBop)
+# 1. Test SSEBop data access
+# 2. Download sample rasters
+# 3. Test zonal statistics workflow
+# 4. Validate ET values against literature
+
+# Run: python -m etl.fetch_ssebop --test-mode
+```
+
+---
+
+## Contact & Approval
+
+Before starting Phase 2 implementation:
+- Review this document completely
+- Prioritize enhancements (top 3-5)
+- Confirm timeline and resources
+- Get stakeholder approval
+
+**Phase 2 Status**: 📋 **Awaiting Prioritization and Approval**
+
+---
+
+**Document End**
