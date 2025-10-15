@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Water-Opt Dashboard - Portfolio Project</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+      color: white;
+      padding: 40px 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.95;
+    }
+
+    .info-section {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .info-section h2 {
+      color: #2ecc71;
+      margin-bottom: 15px;
+    }
+
+    .info-section ul {
+      margin-left: 20px;
+      margin-bottom: 15px;
+    }
+
+    .info-section li {
+      margin-bottom: 8px;
+    }
+
+    .dashboard-wrapper {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    .dashboard-wrapper h2 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .iframe-container {
+      position: relative;
+      width: 100%;
+      height: 850px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .loading-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #666;
+    }
+
+    .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .tech-badge {
+      background-color: #e8f5e9;
+      color: #2ecc71;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .links {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .link-button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #2ecc71;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: background-color 0.3s;
+    }
+
+    .link-button:hover {
+      background-color: #27ae60;
+    }
+
+    .link-button.secondary {
+      background-color: #3498db;
+    }
+
+    .link-button.secondary:hover {
+      background-color: #2980b9;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 1.8rem;
+      }
+
+      .header p {
+        font-size: 1rem;
+      }
+
+      .iframe-container {
+        height: 700px;
+      }
+
+      .links {
+        flex-direction: column;
+      }
+
+      .link-button {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🌾 Water-Opt: Rice Growing Decision Tool</h1>
+      <p>Interactive dashboard for California rice growers comparing profitability of growing rice vs. fallowing and selling water rights</p>
+    </div>
+
+    <!-- Project Info -->
+    <div class="info-section">
+      <h2>About This Project</h2>
+      <p>
+        Water-Opt is a decision support tool built for Central California rice growers facing
+        the annual choice between growing rice or fallowing their land and selling conserved
+        water rights. The tool integrates real-world data from:
+      </p>
+      <ul>
+        <li><strong>Hydrology:</strong> NRCS SNOTEL stations and DWR Bulletin 120 forecasts</li>
+        <li><strong>Markets:</strong> USDA ERS Rice Outlook price data</li>
+        <li><strong>Land Use:</strong> CA DWR Statewide Crop Mapping</li>
+        <li><strong>Compliance:</strong> California water transfer regulatory framework</li>
+      </ul>
+
+      <div class="tech-stack">
+        <span class="tech-badge">Python</span>
+        <span class="tech-badge">Streamlit</span>
+        <span class="tech-badge">Pandas</span>
+        <span class="tech-badge">Plotly</span>
+        <span class="tech-badge">DuckDB</span>
+        <span class="tech-badge">GeoPandas</span>
+      </div>
+
+      <div class="links">
+        <a href="https://github.com/yourusername/WaterProj" class="link-button" target="_blank" rel="noopener">
+          📂 View Source Code
+        </a>
+        <a href="https://your-app-name.streamlit.app" class="link-button secondary" target="_blank" rel="noopener">
+          🚀 Open in New Tab
+        </a>
+      </div>
+    </div>
+
+    <!-- Dashboard Embed -->
+    <div class="dashboard-wrapper">
+      <h2>Live Dashboard</h2>
+      <p style="margin-bottom: 15px; color: #666;">
+        Adjust parameters in the Setup tab, then explore profit analysis, hydrology scenarios,
+        market trends, and field-level mapping.
+      </p>
+
+      <div class="iframe-container">
+        <div class="loading-message">
+          <p>Loading dashboard...</p>
+          <p style="font-size: 0.9rem; margin-top: 10px;">This may take a few seconds</p>
+        </div>
+        <!-- REPLACE 'your-app-name' WITH YOUR ACTUAL STREAMLIT APP URL -->
+        <iframe
+          src="https://your-app-name.streamlit.app?embed=true"
+          loading="lazy"
+          title="Water-Opt Dashboard">
+        </iframe>
+      </div>
+    </div>
+
+    <!-- Key Features -->
+    <div class="info-section">
+      <h2>Key Features</h2>
+      <ul>
+        <li><strong>Profit Comparison:</strong> Real-time calculation of growing vs. fallowing profitability</li>
+        <li><strong>Breakeven Analysis:</strong> Determine the water price threshold for decision-making</li>
+        <li><strong>Sensitivity Analysis:</strong> Tornado charts showing impact of parameter variations</li>
+        <li><strong>Hydrology Scenarios:</strong> Dry/Median/Wet water year planning</li>
+        <li><strong>Spatial Visualization:</strong> 20,000+ rice fields mapped in Sacramento Valley</li>
+        <li><strong>Regulatory Compliance:</strong> Built-in guardrails and water transfer requirements</li>
+      </ul>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>
+        Built by [Your Name] | Educational tool for planning purposes only
+      </p>
+      <p style="margin-top: 10px;">
+        Data sources: USDA NASS, USDA ERS, NRCS AWDB, CA DWR
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // Hide loading message once iframe loads
+    const iframe = document.querySelector('iframe');
+    const loadingMessage = document.querySelector('.loading-message');
+
+    iframe.addEventListener('load', () => {
+      loadingMessage.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

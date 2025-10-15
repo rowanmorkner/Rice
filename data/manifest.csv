@@ -1,0 +1,29 @@
+timestamp,artifact_path,artifact_type,row_count,file_size_bytes,sha256_hash,source,notes
+2025-10-03T16:18:30.845936,data/stage/awdb_swe_daily.parquet,parquet,47118,76476,beb6905e5be60b2ab62713479a6670201ae6b7a107ea9d595ad0b5fe04a0fc8e,AWDB,Daily SWE from 12 Sierra SNOTEL stations
+2025-10-03T16:18:32.842640,data/mart/hydro_scenarios.parquet,parquet,12,3715,74dca65273c2c527146cc756ce94d89ec363f7f916448af014becdd70a04439f,AWDB,Monthly dry/median/wet SWE percentiles for scenario modeling
+2025-10-03T16:40:20.337025,data/stage/b120_forecast.parquet,parquet,36,4394,647be514394bf97e9b28f6e63d313ce326d2ac3b6f2b4dd4f7f9a273bb1413c9,Bulletin_120,Water supply forecasts from DWR Bulletin 120
+2025-10-03T16:52:26.006349,data/stage/awdb_swe_daily.parquet,parquet,47118,76476,7004f2953bee72289b0ad7fc866e31cafbffc0b366f1a03281191bfcdebb285e,AWDB,Daily SWE from 12 Sierra SNOTEL stations
+2025-10-03T16:52:26.085137,data/mart/hydro_scenarios.parquet,parquet,12,3715,22a232366a71b4b7688e532a13bb11a558b79c06b717fa7389f3b0ddadcad6e6,AWDB,Monthly dry/median/wet SWE percentiles for scenario modeling
+2025-10-03T16:52:39.395014,data/stage/b120_forecast.parquet,parquet,36,4394,647be514394bf97e9b28f6e63d313ce326d2ac3b6f2b4dd4f7f9a273bb1413c9,Bulletin_120,Water supply forecasts from DWR Bulletin 120
+2025-10-03T22:23:18.798299,data/stage/ers_prices.parquet,parquet,2,2511,f58d2040238f0560f7e107c0e12978fd7fdce89230c7375e0a2ab82233e68c84,ERS_Rice_Outlook,California rice prices from USDA ERS Rice Outlook
+2025-10-03T22:50:13.153271,data/stage/dwr_rice_2022.geojson,geojson,4612,13103291,fc02eb22ccdf12a30d0c96515090e6dec9ad3ee8b1073cf04ebf0bd8155b0dce,DWR_Crop_Map,2022 rice polygons for Sacramento Valley counties
+2025-10-03T22:50:13.820335,data/mart/rice_polygons_2022.parquet,parquet,4612,136136,20540b473e54cc48bb5565ac6ab9af33418dc8afbfbf1fc8152887f45bb578a7,DWR_Crop_Map,Rice polygon centroids and attributes for Sacramento Valley
+2025-10-03T23:18:03.329662,data/stage/cimis_daily.parquet,parquet,1098,7201,626a528cfd4e9bcd6b9e1130bc76e657028d5f1a41c614563052a7082051f39c,CIMIS,Daily reference ET from 3 Sacramento Valley stations
+2025-10-03T23:23:32.449884,data/stage/awdb_swe_daily.parquet,parquet,47118,76476,7004f2953bee72289b0ad7fc866e31cafbffc0b366f1a03281191bfcdebb285e,AWDB,Daily SWE from 12 Sierra SNOTEL stations
+2025-10-03T23:23:32.493910,data/mart/hydro_scenarios.parquet,parquet,12,3715,22a232366a71b4b7688e532a13bb11a558b79c06b717fa7389f3b0ddadcad6e6,AWDB,Monthly dry/median/wet SWE percentiles for scenario modeling
+2025-10-03T23:23:34.917768,data/stage/b120_forecast.parquet,parquet,36,4394,647be514394bf97e9b28f6e63d313ce326d2ac3b6f2b4dd4f7f9a273bb1413c9,Bulletin_120,Water supply forecasts from DWR Bulletin 120
+2025-10-03T23:23:48.683704,data/stage/ers_prices.parquet,parquet,2,2511,f58d2040238f0560f7e107c0e12978fd7fdce89230c7375e0a2ab82233e68c84,ERS_Rice_Outlook,California rice prices from USDA ERS Rice Outlook
+2025-10-03T23:23:51.841458,data/stage/cimis_daily.parquet,parquet,1098,7201,626a528cfd4e9bcd6b9e1130bc76e657028d5f1a41c614563052a7082051f39c,CIMIS,Daily reference ET from 3 Sacramento Valley stations
+2025-10-03T23:45:21.362989,data/stage/ers_prices.parquet,parquet,2,2511,f58d2040238f0560f7e107c0e12978fd7fdce89230c7375e0a2ab82233e68c84,ERS_Rice_Outlook,California rice prices from USDA ERS Rice Outlook
+2025-10-03T23:59:39.242928,data/stage/awdb_swe_daily.parquet,parquet,47118,76476,7004f2953bee72289b0ad7fc866e31cafbffc0b366f1a03281191bfcdebb285e,AWDB,Daily SWE from 12 Sierra SNOTEL stations
+2025-10-03T23:59:40.420730,data/mart/hydro_scenarios.parquet,parquet,12,3715,22a232366a71b4b7688e532a13bb11a558b79c06b717fa7389f3b0ddadcad6e6,AWDB,Monthly dry/median/wet SWE percentiles for scenario modeling
+2025-10-03T23:59:53.419865,data/stage/b120_forecast.parquet,parquet,36,4394,647be514394bf97e9b28f6e63d313ce326d2ac3b6f2b4dd4f7f9a273bb1413c9,Bulletin_120,Water supply forecasts from DWR Bulletin 120
+2025-10-03T23:59:55.500877,data/stage/ers_prices.parquet,parquet,2,2511,f58d2040238f0560f7e107c0e12978fd7fdce89230c7375e0a2ab82233e68c84,ERS_Rice_Outlook,California rice prices from USDA ERS Rice Outlook
+2025-10-04T00:00:15.294590,data/stage/dwr_rice_2022.geojson,geojson,4612,13103291,fc02eb22ccdf12a30d0c96515090e6dec9ad3ee8b1073cf04ebf0bd8155b0dce,DWR_Crop_Map,2022 rice polygons for Sacramento Valley counties
+2025-10-04T00:00:15.939301,data/mart/rice_polygons_2022.parquet,parquet,4612,136136,20540b473e54cc48bb5565ac6ab9af33418dc8afbfbf1fc8152887f45bb578a7,DWR_Crop_Map,Rice polygon centroids and attributes for Sacramento Valley
+2025-10-08T14:18:12.106355,data/stage/awdb_swe_daily.parquet,parquet,47178,76566,c596a806775ced12c75d258139b7621f51d35a96a1444e2f00d765c043985068,AWDB,Daily SWE from 12 Sierra SNOTEL stations
+2025-10-08T14:18:12.254655,data/mart/hydro_scenarios.parquet,parquet,12,3715,22a232366a71b4b7688e532a13bb11a558b79c06b717fa7389f3b0ddadcad6e6,AWDB,Monthly dry/median/wet SWE percentiles for scenario modeling
+2025-10-08T14:18:15.529238,data/stage/b120_forecast.parquet,parquet,36,4394,603122f466b3ed6ef02dbfe9d298b6dadb10a7c963dde269755f970c9b05defb,Bulletin_120,Water supply forecasts from DWR Bulletin 120
+2025-10-08T14:18:17.684421,data/stage/ers_prices.parquet,parquet,2,2511,f58d2040238f0560f7e107c0e12978fd7fdce89230c7375e0a2ab82233e68c84,ERS_Rice_Outlook,California rice prices from USDA ERS Rice Outlook
+2025-10-08T14:18:34.920971,data/stage/dwr_rice_2022.geojson,geojson,4612,13103291,fc02eb22ccdf12a30d0c96515090e6dec9ad3ee8b1073cf04ebf0bd8155b0dce,DWR_Crop_Map,2022 rice polygons for Sacramento Valley counties
+2025-10-08T14:18:35.567382,data/mart/rice_polygons_2022.parquet,parquet,4612,136136,20540b473e54cc48bb5565ac6ab9af33418dc8afbfbf1fc8152887f45bb578a7,DWR_Crop_Map,Rice polygon centroids and attributes for Sacramento Valley

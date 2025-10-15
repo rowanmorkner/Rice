@@ -250,6 +250,43 @@ Use the Export button in the Decision tab to save:
 - **Disk**: 1GB for data storage
 - **Internet**: Required for initial data fetch, optional afterwards
 
+## Deployment
+
+### Streamlit Community Cloud (Recommended)
+
+Deploy this dashboard for free on Streamlit Cloud:
+
+1. **Push to GitHub**: Ensure your repository is pushed to GitHub
+2. **Sign up**: Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub
+3. **Deploy**: Click "New app" and select your repository
+   - Main file: `app/Main.py`
+   - Choose a custom subdomain (e.g., `water-opt-dashboard`)
+4. **Configure**: Add any API keys in Settings > Secrets (optional)
+5. **Launch**: Click "Deploy" and wait 3-5 minutes
+
+**See [CHECKLIST_STREAMLIT.md](../CHECKLIST_STREAMLIT.md) for detailed deployment steps.**
+
+### Embed in Your Website
+
+Once deployed, embed using an iframe:
+
+```html
+<iframe
+  src="https://your-app-name.streamlit.app?embed=true"
+  width="100%"
+  height="800px"
+  frameborder="0"
+  style="border: none;">
+</iframe>
+```
+
+### Local Development
+
+For local testing:
+```bash
+streamlit run app/Main.py
+```
+
 ## License and Disclaimer
 
 This is an educational tool for planning purposes only. Always consult with:

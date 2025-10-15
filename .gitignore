@@ -1,8 +1,11 @@
-# Data directories
-data/
+# Data directories (allow stage and mart for deployment)
+# data/stage/ and data/mart/ are committed for Streamlit deployment
+data/raw/
+data/exports/
 
-# Environment variables
+# Environment variables and secrets
 .env
+.streamlit/secrets.toml
 
 # Python
 __pycache__/
