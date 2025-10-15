@@ -238,24 +238,44 @@ def tab_hydrology():
     if scenarios_path.exists():
         df_scenarios = pd.read_parquet(scenarios_path)
 
-        # Filter for key months (April-July)
-        df_display = df_scenarios[df_scenarios['month'].isin([4, 5, 6, 7])].copy()
-        df_display['allocation_pct'] = (df_display['allocation_index'] * 100).astype(int)
+        # Check if data has allocation_index (new format) or percentile columns (old format)
+        if 'allocation_index' in df_scenarios.columns and 'scenario' in df_scenarios.columns:
+            # New format with allocation_index
+            df_display = df_scenarios[df_scenarios['month'].isin([4, 5, 6, 7])].copy()
+            df_display['allocation_pct'] = (df_display['allocation_index'] * 100).astype(int)
 
-        # Pivot for display
-        pivot = df_display.pivot_table(
-            index='month',
-            columns='scenario',
-            values='allocation_pct',
-            aggfunc='first'
-        )[['dry', 'median', 'wet']]
+            # Pivot for display
+            pivot = df_display.pivot_table(
+                index='month',
+                columns='scenario',
+                values='allocation_pct',
+                aggfunc='first'
+            )[['dry', 'median', 'wet']]
 
-        pivot.index = pivot.index.map({4: 'April', 5: 'May', 6: 'June', 7: 'July'})
-        pivot.columns = ['Dry (%)', 'Median (%)', 'Wet (%)']
+            pivot.index = pivot.index.map({4: 'April', 5: 'May', 6: 'June', 7: 'July'})
+            pivot.columns = ['Dry (%)', 'Median (%)', 'Wet (%)']
 
-        st.dataframe(pivot, use_container_width=True)
+            st.dataframe(pivot, use_container_width=True)
+            st.caption("Allocation index represents estimated water supply availability (0-100%)")
 
-        st.caption("Allocation index represents estimated water supply availability (0-100%)")
+        elif 'p10_dry_mm' in df_scenarios.columns:
+            # Old format with percentile columns - convert to inches and display
+            df_display = df_scenarios[df_scenarios['month'].isin([4, 5, 6, 7])].copy()
+
+            # Convert mm to inches
+            df_display['Dry (in)'] = (df_display['p10_dry_mm'] / 25.4).round(1)
+            df_display['Median (in)'] = (df_display['p50_median_mm'] / 25.4).round(1)
+            df_display['Wet (in)'] = (df_display['p90_wet_mm'] / 25.4).round(1)
+
+            # Create display table
+            display_cols = ['Dry (in)', 'Median (in)', 'Wet (in)']
+            pivot = df_display[['month'] + display_cols].set_index('month')
+            pivot.index = pivot.index.map({4: 'April', 5: 'May', 6: 'June', 7: 'July'})
+
+            st.dataframe(pivot, use_container_width=True)
+            st.caption("Snow Water Equivalent (SWE) in inches for dry (p10), median (p50), and wet (p90) scenarios")
+        else:
+            st.warning("Hydro scenarios data format not recognized")
     else:
         st.info("Hydro scenarios not generated yet.")
 
